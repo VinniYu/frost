@@ -1,0 +1,10 @@
+push ppm through 3d renderer to generate a bump map
+- houdini/blender
+
+
+question becomes: what generated the feathering?
+- how do you introduce curl into the feathers
+
+try to find intuition of what causes feathering
+try to find analog of reasoning in continuum method
+

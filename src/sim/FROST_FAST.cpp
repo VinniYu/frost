@@ -13,8 +13,6 @@ void Frost::initGPU() {
     uploadBoundary();
 
     createPrograms();
-
-
 }
 
 void Frost::createPrograms() {

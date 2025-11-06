@@ -48,6 +48,18 @@ struct CameraData {
 };
 CameraData camera;
 
+GLuint volumeTex = 0;
+GLuint heightTex = 0;
+GLuint cubeVAO = 0, cubeVBO = 0, cubeEBO = 0;
+GLuint volProgram = 0;
+
+int volW = 0, volH = 0, volD = 64;   // D = # of slices extruded from 2D
+// tunables
+float uSigmaT = 8.0f, uSigmaS = 5.0f, uExposure = 1.5f;
+vec3  uSigmaA = vec3(0.12f, 0.06f, 0.03f); // more red absorption -> bluish ice
+float uStepMul = 300.0f;  // samples per unit distance through the box
+
+
 void rotateCamLeft() {
 	float angle = -3.0f * M_PI / 180.0f;
 	float x = camera.eye.x, z = camera.eye.z;
@@ -75,8 +87,47 @@ void updateCamera() {
 
 vector<float> values;
 
-// current zoom level into the field
-float zoom = 1.0;
+
+static GLuint makeHeight2D(const std::vector<float>& vals, int W, int H) {
+    glGenTextures(1, &heightTex);
+    glBindTexture(GL_TEXTURE_2D, heightTex);
+
+    // pack to uint8 (0..255), since your PPM reader gave 0..255 floats
+    std::vector<uint8_t> r(W*H);
+    for (size_t i = 0; i < r.size(); ++i) r[i] = (uint8_t)glm::clamp(vals[i], 0.0f, 255.0f);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, W, H, 0, GL_RED, GL_UNSIGNED_BYTE, r.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);   // or GL_NEAREST for pixel-crisp
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);   // ^
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return heightTex;
+}
+
+
+static void makeCube()
+{
+  const float V[] = {
+    -0.5f,-0.5f,-0.5f,  0.5f,-0.5f,-0.5f,  0.5f, 0.5f,-0.5f, -0.5f, 0.5f,-0.5f,
+    -0.5f,-0.5f, 0.5f,  0.5f,-0.5f, 0.5f,  0.5f, 0.5f, 0.5f, -0.5f, 0.5f, 0.5f
+  };
+  const unsigned I[] = {
+    0,1,2, 2,3,0,  4,5,6, 6,7,4,
+    0,4,7, 7,3,0,  1,5,6, 6,2,1,
+    3,2,6, 6,7,3,  0,1,5, 5,4,0
+  };
+  glGenVertexArrays(1, &cubeVAO);
+  glGenBuffers(1, &cubeVBO);
+  glGenBuffers(1, &cubeEBO);
+  glBindVertexArray(cubeVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, cubeVBO); glBufferData(GL_ARRAY_BUFFER, sizeof(V), V, GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeEBO); glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(I), I, GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0); glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,3*sizeof(float),(void*)0);
+  glBindVertexArray(0);
+}
+
 
 ///////////////////////////////////////////////////////////////////////
 // GL and GLUT callbacks
@@ -258,20 +309,39 @@ void initRenderer() {
 	updateCamera();
 }
 
-void render() {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	glUseProgram(renderer);
 
-	glUniformMatrix4fv(camera.model, 1, GL_FALSE, glm::value_ptr(mat4(1.0f)));
+void render()
+{
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glBindVertexArray(boundVAO);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glLineWidth(2.0f);
-	glDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, 0);
+  // Keep view fresh (camera may have moved with keys)
+  camera.view = glm::lookAt(camera.eye, camera.origin, camera.up);
 
-	glBindVertexArray(0);
-	glUseProgram(0);
+  // Identity model: cube centered at origin spanning [-0.5,0.5]^3
+  const glm::mat4 model(1.0f);
+
+  glUseProgram(volProgram);
+
+  // Upload MVP
+  glUniformMatrix4fv(camera.model, 1, GL_FALSE, glm::value_ptr(model));
+  glUniformMatrix4fv(camera.viewU, 1, GL_FALSE, glm::value_ptr(camera.view));
+  glUniformMatrix4fv(camera.projU, 1, GL_FALSE, glm::value_ptr(camera.proj));
+
+  // Camera position in object space (model is identity → same as world)
+  const GLint uCamObjLoc = glGetUniformLocation(volProgram, "uCamPosObj");
+  if (uCamObjLoc >= 0) glUniform3fv(uCamObjLoc, 1, glm::value_ptr(camera.eye));
+
+  // Ensure the height texture is bound to unit 0
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, heightTex);
+
+  // Draw the proxy
+  glBindVertexArray(cubeVAO);
+  glDisable(GL_CULL_FACE); // see both front/back surfaces for rays exiting/entering
+  glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+  glBindVertexArray(0);
+
+  glUseProgram(0);
 }
 
 /////////////////////////////////////////////////////////////////////// 
@@ -291,20 +361,68 @@ int main(int argc, char **argv)
 
 void runOnce()
 {
-  // seed the RNG
   srand(time(NULL));
-
   printCommands();
 
-  initRenderer();
+  // ray-march program
+  volProgram = createRenderProgram("./src/render/marchVert.glsl",
+                                   "./src/render/marchFrag.glsl");
 
-  if (readPPM("./media/densityMap.ppm", 1024, 1024, values)) {
-  }
+  camera.model = glGetUniformLocation(volProgram, "uModel");
+  camera.viewU = glGetUniformLocation(volProgram, "uView");
+  camera.projU = glGetUniformLocation(volProgram, "uProj");
+
+  glEnable(GL_DEPTH_TEST);
+
+  // geometry: unit cube as proxy volume
+  makeCube();
+
+  const float aspect = float(xScreenRes) / float(yScreenRes);
+  camera.proj = glm::perspective(glm::radians(60.0f), aspect, 0.1f, 10.0f);
+  camera.view = glm::lookAt(camera.eye, camera.origin, camera.up);
+
+  // ppload proj once 
+  glUseProgram(volProgram);
+  glUniformMatrix4fv(camera.projU, 1, GL_FALSE, glm::value_ptr(camera.proj));
+  glUseProgram(0);
+
+  // load PPM  
+  int W = 1024, H = 1024; 
+  readPPM("./media/densityMap.ppm", W, H, values);
+  heightTex = makeHeight2D(values, W, H);
+
+  // bind static uniforms + texture unit
+  glUseProgram(volProgram);
+
+  // sampler binding
+  const GLint uHeightLoc = glGetUniformLocation(volProgram, "uHeight");
+  glUniform1i(uHeightLoc, 0);  // texture unit 0
+
+  // raymarch/appearance tunables
+  const GLint uStepLoc  = glGetUniformLocation(volProgram, "uStepMul");
+  const GLint uExpoLoc  = glGetUniformLocation(volProgram, "uExposure");
+  glUniform1f(uStepLoc,  uStepMul);
+  glUniform1f(uExpoLoc,  uExposure);
+
+  // lighting/scatter params 
+  const GLint uSigmaTLoc = glGetUniformLocation(volProgram, "uSigmaT");
+  const GLint uSigmaSLoc = glGetUniformLocation(volProgram, "uSigmaS");
+  const GLint uSigmaALoc = glGetUniformLocation(volProgram, "uSigmaA");
+  const GLint uLdirObj   = glGetUniformLocation(volProgram, "uLightDirObj");
+  if (uSigmaTLoc >= 0) glUniform1f(uSigmaTLoc, uSigmaT);
+  if (uSigmaSLoc >= 0) glUniform1f(uSigmaSLoc, uSigmaS);
+  if (uSigmaALoc >= 0) glUniform3fv(uSigmaALoc, 1, glm::value_ptr(uSigmaA));
+  if (uLdirObj  >= 0) glUniform3f(uLdirObj, -0.4f, 0.8f, 0.4f);
+
+  glUseProgram(0);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, heightTex);
 }
 
 void runEverytime()       
 {          
-  glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+  glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // always render
