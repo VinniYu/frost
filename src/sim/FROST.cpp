@@ -469,6 +469,7 @@ void Frost::init() {
 ///////////////////////////////////////////////////////////////////////
 
 void Frost::renderBounds() {
+
 	glUseProgram(_boundRenderer);
 
 	glUniformMatrix4fv(_boundU.model, 1, GL_FALSE, glm::value_ptr(mat4(1.0f)));

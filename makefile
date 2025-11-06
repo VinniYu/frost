@@ -7,20 +7,27 @@ CC      = g++
 CFLAGS  = ${CFLAGS_COMMON}
 LDFLAGS = ${LDFLAGS_COMMON}
 
-# Executable names
-EXECUTABLE = bin/frost
+# executable names
+SIMULATOR = bin/frost
+RENDERER = bin/render
 
 # Source files
-SOURCES = src/sim/main.cpp src/sim/FROST.cpp src/sim/FROST_FAST.cpp src/util/SHADER.cpp 
+SIMULATOR_SRC = src/sim/main.cpp src/sim/FROST.cpp src/sim/FROST_FAST.cpp src/util/SHADER.cpp 
+RENDERER_SRC = src/util/RENDER_DENSITY.cpp src/util/SHADER.cpp
 
-OBJECTS = $(SOURCES:.cpp=.o)
+SIMULATOR_OBJ = $(SIMULATOR_SRC:.cpp=.o)
+RENDERER_OBJ = $(RENDERER_SRC:.cpp=.o)
 
 # Default target
-all: $(EXECUTABLE)
+all: $(SIMULATOR) $(RENDERER)
 
 # Build rules
-$(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+$(SIMULATOR): $(SIMULATOR_OBJ)
+	$(CC) $(SIMULATOR_OBJ) $(LDFLAGS) -o $@
+
+# Renderer build
+$(RENDERER): $(RENDERER_OBJ)
+	$(CC) $(RENDERER_OBJ) $(LDFLAGS) -o $@
 
 # Generic rule for .cpp -> .o
 .cpp.o:
@@ -28,4 +35,4 @@ $(EXECUTABLE): $(OBJECTS)
 
 # Clean rule
 clean:
-	rm -f src/sim/*.o $(EXECUTABLE) src/util/*.o
+	rm -f src/sim/*.o src/util/*.o $(SIMULATOR) $(RENDERER)

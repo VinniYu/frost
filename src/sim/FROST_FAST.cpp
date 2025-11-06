@@ -427,7 +427,8 @@ void Frost::createHeightMap() {
     
     // write to a ppm file
     const float norm = yMax - yMin;
-    writeMapPNG(norm, _ppmW, _ppmH, height, yMin, "./media/heightMap.png");
+    writeMapPPM(norm, _ppmW, _ppmH, height, yMin, "./media/heightMap.ppm");
+    // writeMapPNG(norm, _ppmW, _ppmH, height, yMin, "./media/heightMap.png");
 }
 
 void Frost::createDensityMap() {
@@ -552,7 +553,8 @@ void Frost::createDensityMap() {
     const float norm = yMax - yMin; 
     for (auto &v : outVal)
         v *= 10.0f;
-    writeMapPNG(norm, _ppmW, _ppmH, outVal, yMin, "./media/densityMap.png");
+    writeMapPPM(norm, _ppmW, _ppmH, outVal, yMin, "./media/densityMap.ppm");
+    // writeMapPNG(norm, _ppmW, _ppmH, outVal, yMin, "./media/densityMap.png");
 
 }
 

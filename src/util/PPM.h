@@ -53,6 +53,65 @@ void writeMapPPM(float norm, int W, int H, vector<float> &height, float yMin, co
     cout << "Generated PPM.\n";
 }
 
+bool readPPM(const string& filename, int W, int H, vector<float> &values) {
+    FILE *fp = fopen(filename.c_str(), "rb");
+    if (!fp) {
+        cerr << "Failed to open PPM file: " << filename << endl;
+        return false;
+    }
+
+    // read header
+    char header[3];
+    if (fscanf(fp, "%2s", header) != 1 || string(header) != "P6") {
+        cerr << "Not a valid P6 PPM file.\n";
+        fclose(fp);
+        return false;
+    }
+
+    // skip comments and read width, height, maxval
+    int maxval = 0;
+    int c = fgetc(fp);
+    while (c == '#') {            // skip comment lines
+        while (c != '\n' && c != EOF) c = fgetc(fp);
+        c = fgetc(fp);
+    }
+    ungetc(c, fp);
+    if (fscanf(fp, "%d %d", &W, &H) != 2) {
+        cerr << "Failed to read width/height.\n";
+        fclose(fp);
+        return false;
+    }
+    if (fscanf(fp, "%d", &maxval) != 1) {
+        cerr << "Failed to read maxval.\n";
+        fclose(fp);
+        return false;
+    }
+
+    // skip one whitespace char after header
+    fgetc(fp);
+
+    const size_t nPixels = static_cast<size_t>(W) * static_cast<size_t>(H);
+    vector<uint8_t> pixels(nPixels * 3u);
+
+    size_t readCount = fread(pixels.data(), 1, pixels.size(), fp);
+    fclose(fp);
+
+    if (readCount != pixels.size()) {
+        cerr << "Unexpected EOF when reading pixel data.\n";
+        return false;
+    }
+
+    // convert grayscale back to floats
+    values.resize(nPixels);
+    for (size_t i = 0; i < nPixels; ++i) {
+        // since we stored R=G=B, just read one channel
+        values[i] = static_cast<float>(pixels[i * 3]);
+    }
+
+    cout << "Loaded PPM: " << filename << " (" << W << "x" << H << ")\n";
+    return true;
+}
+
 void writeMapPNG(float norm, int W, int H, const vector<float> &height,
                  float yMin, const string &filename)
 {
