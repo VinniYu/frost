@@ -97,6 +97,7 @@ public:
 	// analysis 
 	void createHeightMap();
 	void createDensityMap();
+	void setParams(float rho, float kappa[2][4], float beta[2][4]);
 
 private:
 
@@ -196,20 +197,21 @@ private:
 
 	
 // physical parameters
-REAL _rho = 0.10f;
-float _kappa[2][4] = {
-	/* nZ=0 */ {0.10f, 0.1f, 0.1f, 0.1f},
-	/* nZ=1 */ {0.10f, 0.1f, 0.1f, 0.1f}
-};
-float _beta[2][4] = {
-	/* nZ=0 */ {5.10f, 1.00f, 2.00f, 2.00f},
-	/* nZ=1 */ {5.10f, 1.00f, 2.00f, 2.00f}
-};
-float _mu[2][4] = {
-	/* nZ=0 */ {0.00f, 0.01f, 0.01f, 0.01f},
-	/* nZ=1 */ {0.01f, 0.01f, 0.01f, 0.01f}
-};
+	REAL _rho = 0.10f;
+	float _kappa[2][4] = {
+		/* nZ=0 */ {0.10f, 0.1f, 0.1f, 0.1f},
+		/* nZ=1 */ {0.10f, 0.1f, 0.1f, 0.1f}
+	};
+	float _beta[2][4] = {
+		/* nZ=0 */ {5.10f, 1.00f, 2.00f, 2.00f},
+		/* nZ=1 */ {5.10f, 1.00f, 2.00f, 2.00f}
+	};
+	float _mu[2][4] = {
+		/* nZ=0 */ {0.00f, 0.01f, 0.01f, 0.01f},
+		/* nZ=1 */ {0.01f, 0.01f, 0.01f, 0.01f}
+	};
 
+	
 
 
 

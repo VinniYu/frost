@@ -552,7 +552,7 @@ void Frost::createDensityMap() {
     for (auto &v : outVal)
         v *= 10.0f;
     writeMapPPM(norm, _ppmW, _ppmH, outVal, yMin, "./media/densityMap.ppm");
-    // writeMapPNG(norm, _ppmW, _ppmH, outVal, yMin, "./media/densityMap.png");
+    writeMapPNG(norm, _ppmW, _ppmH, outVal, yMin, "./media/densityMap.png");
 
 }
 

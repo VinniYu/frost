@@ -835,3 +835,13 @@ void Frost::findBoundarySites() {
     }
 }
 
+
+void Frost::setParams(float rho, float kappa[2][4], float beta[2][4]) {
+	_rho = rho;
+	for (int i = 0; i < 2; i++) {
+		for (int j = 0; j < 4; j++) {
+			_kappa[i][j] = kappa[i][j];
+			_beta[i][j] = beta[i][j];
+		}
+	}
+}

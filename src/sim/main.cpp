@@ -4,6 +4,7 @@
 #include "FROST.h"
 #include <thread>
 #include <chrono>
+#include <sstream>
 
 using namespace std;
 
@@ -16,6 +17,11 @@ Frost *simulator = nullptr;
 bool showSites = false;
 bool showEdges = true;
 int showBoundary = false;
+
+bool customParams = false;
+float kappa[2][4];
+float betaVal[2][4];
+float rho;
 
 // Text for the title bar of the window
 string windowLabel("Frost Simulation");
@@ -184,6 +190,32 @@ void printCommands()
 /////////////////////////////////////////////////////////////////////// 
 int main(int argc, char **argv)
 {
+  if (argc == 6) {
+    customParams = true;
+
+    rho = stof(argv[1]);
+
+    auto parseRow = [](const std::string& s) {
+        stringstream ss(s);
+        vector<float> row(4);
+        for (int i = 0; i < 4; ++i) ss >> row[i];
+        return row;
+    };
+
+    auto kappaRow1 = parseRow(argv[2]);
+    auto kappaRow2 = parseRow(argv[3]);
+    auto betaRow1  = parseRow(argv[4]);
+    auto betaRow2  = parseRow(argv[5]);
+
+    for (int j = 0; j < 4; ++j) {
+      kappa[0][j] = kappaRow1[j];
+      kappa[1][j] = kappaRow2[j];
+      betaVal[0][j] = betaRow1[j];
+      betaVal[1][j] = betaRow2[j];
+    }
+
+  }
+
   // initialize GLUT and GL
   glutInit(&argc, argv); 
 
@@ -206,6 +238,7 @@ void runOnce()
 
   // construct simulator
   simulator = new Frost(gridRadius);
+  if (customParams) simulator->setParams(rho, kappa, betaVal);
   
   simulator->setResolution(xScreenRes, yScreenRes);
   simulator->init(); 
@@ -225,8 +258,8 @@ void runEverytime()
     iters++;
   }
 
-  if (iters == 50) {
-    simulator->createHeightMap();
+  if (iters == 30) {
+    // simulator->createHeightMap();
     simulator->createDensityMap();
     exit(0);
   }
@@ -234,7 +267,7 @@ void runEverytime()
   
   
   // always render
-  simulator->render();
+  // simulator->render();
 
   // this_thread::sleep_for(chrono::milliseconds(50));
   
