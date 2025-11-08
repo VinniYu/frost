@@ -258,7 +258,7 @@ void runEverytime()
     iters++;
   }
 
-  if (iters == 30) {
+  if (iters == 20) {
     // simulator->createHeightMap();
     simulator->createDensityMap();
     exit(0);
