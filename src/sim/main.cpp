@@ -252,13 +252,13 @@ void runEverytime()
   static int iters = 0;
   if (animate) {
     
-    for (int i = 0; i < 60; i++) {
+    for (int i = 0; i < 20; i++) {
       simulator->gpuTimestep();
     } 
     iters++;
   }
 
-  if (iters == 20) {
+  if (iters == 5) {
     // simulator->createHeightMap();
     simulator->createDensityMap();
     exit(0);
