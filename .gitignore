@@ -1,5 +1,5 @@
 *.o
 .vscode
 /archive
-/experiments/*
+/analysis/sweep_results/*
 /bin

@@ -267,7 +267,7 @@ void runEverytime()
   
   
   // always render
-  // simulator->render();
+  simulator->render();
 
   // this_thread::sleep_for(chrono::milliseconds(50));
   
